@@ -1,10 +1,11 @@
 const { Client, Intents, Collection } = require("discord.js");
-
+const fs = require("fs");
+const chalk = require('chalk');
 
 require('dotenv').config();
 
 // Client trigger options
-const botClient = new Client({
+const bot = new Client({
   intents: [
     Intents.FLAGS.GUILDS,
     Intents.FLAGS.GUILD_MESSAGES,
@@ -15,16 +16,23 @@ const botClient = new Client({
   partials: ["MESSAGE", "CHANNEL", "REACTION"],
 });
 
-botClient.login(process.env.TOKEN);
+bot.login(process.env.TOKEN);
 
-// Collections, maps and registries for command/event loading
-botClient.slashcommands = new Collection();
-botClient.functions = require('./utils/functions')
-require("./utils/managers/registryManager")(botClient);
+bot.slashcommands = new Collection();
+  fs.readdirSync("./src/events").forEach((module) => {
+    const eventFiles = fs
+      .readdirSync(`./src/events/${module}/`)
+      .filter((file) => file.endsWith(".js"));
 
-// Database connection
-databaseManager.dbConnect();
+    for (const file of eventFiles) {
+      const event = require(`./events/${module}/${file}`);
+      event.category = module;
+      let eventName = file.split(".")[0];
+      console.log(`${chalk.black.bgGreen('Loaded event')}`, `${chalk.white(`${eventName.toUpperCase()}`)}`)
 
+      bot.on(eventName, event.bind(null, bot));
+    }
+  });
 
 // Avoid bot crashing down from a simple mistake
 process.on("unhandledRejection", (error) => {
